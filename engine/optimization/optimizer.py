@@ -28,7 +28,10 @@ from engine.evaluation.resistance import (
     compute_travel_times,
 )
 from engine.evaluation.safety import evaluate_safety
-from scenarios.canonical_4arm import INTERSECTION as CANONICAL_INTERSECTION
+from scenarios.canonical_4arm import (
+    DEMAND_RECORDS,
+    INTERSECTION as CANONICAL_INTERSECTION,
+)
 
 # NOTE: Track A simulation engine (engine.simulation.loop.run_simulation) is pending integration.
 # When engine.simulation.loop becomes available, run_simulation(intersection) will be called
@@ -178,7 +181,7 @@ def run_optimization(
                 trajectories: list[Trajectory] = []
                 if run_simulation is not None:
                     # Trajectories returned by simulation loop
-                    trajectories = run_simulation(intersection)
+                    trajectories = run_simulation(intersection, DEMAND_RECORDS)
 
                 safety_res: SafetyResult = evaluate_safety(intersection, trajectories)
                 cost_val: float = estimate_cost(intersection)

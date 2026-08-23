@@ -24,7 +24,10 @@ from engine.evaluation.resistance import (
     compute_travel_times,
 )
 from engine.evaluation.safety import evaluate_safety
-from scenarios.canonical_4arm import INTERSECTION as CANONICAL_INTERSECTION
+from scenarios.canonical_4arm import (
+    DEMAND_RECORDS,
+    INTERSECTION as CANONICAL_INTERSECTION,
+)
 
 # Check for Track A simulation loop
 try:
@@ -96,7 +99,7 @@ def simulate_intersection(id: str) -> SimulationResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Simulation engine not yet available (Track A pending)",
         )
-    trajectories = run_simulation(CANONICAL_INTERSECTION)
+    trajectories = run_simulation(CANONICAL_INTERSECTION, DEMAND_RECORDS)
     macro_samples = compute_macro_samples(trajectories, CANONICAL_INTERSECTION)
     return SimulationResponse(trajectories=trajectories, macro_samples=macro_samples)
 
