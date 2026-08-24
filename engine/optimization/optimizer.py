@@ -83,7 +83,10 @@ def build_modified_intersection(
     for app in approaches:
         for i in range(lane_count):
             lane_id = f"{app}-L{i+1}"
-            movements = ["left"] if i == 0 else (["right"] if i == lane_count - 1 else ["through"])
+            if lane_count == 2:
+                movements = ["left"] if i == 0 else ["through", "right"]
+            else:
+                movements = ["left"] if i == 0 else (["right"] if i == lane_count - 1 else ["through"])
             new_lanes.append(
                 Lane(
                     id=lane_id,
@@ -94,15 +97,229 @@ def build_modified_intersection(
                 )
             )
 
-    # 2. Build Signal
+    # Geometry constants matching canonical_4arm
+    HALF_BOX = 10.0
+    RUN_OUT = 30.0
+    LANE_WIDTH = 3.5
+    SPEED_THROUGH = 11.1
+    SPEED_TURN = 5.0
+    _NS_ENTRY = HALF_BOX + RUN_OUT
+    _NS_EXIT = -(HALF_BOX + RUN_OUT)
+    _EW_ENTRY = HALF_BOX + RUN_OUT
+    _EW_EXIT = -(HALF_BOX + RUN_OUT)
+
+    def _n_off(i: int) -> float:
+        return -(i + 0.5) * LANE_WIDTH
+
+    def _s_off(i: int) -> float:
+        return (i + 0.5) * LANE_WIDTH
+
+    def _e_off(i: int) -> float:
+        return (i + 0.5) * LANE_WIDTH
+
+    def _w_off(i: int) -> float:
+        return -(i + 0.5) * LANE_WIDTH
+
+    target_curvature = 1.0 / curve_radius if curve_radius != 0 else 0.0
+
+    def _points_turn(
+        x0: float, y0: float, xm: float, ym: float, x1: float, y1: float, curvature: float
+    ) -> list[PathPoint]:
+        leg1 = math.sqrt((xm - x0) ** 2 + (ym - y0) ** 2)
+        leg2 = math.sqrt((x1 - xm) ** 2 + (y1 - ym) ** 2)
+        total = leg1 + leg2
+        return [
+            PathPoint(s=0.0, x=x0, y=y0, curvature=0.0),
+            PathPoint(s=leg1, x=xm, y=ym, curvature=curvature),
+            PathPoint(s=total, x=x1, y=y1, curvature=0.0),
+        ]
+
+    def _points_straight(
+        x0: float, y0: float, x1: float, y1: float, n: int = 5
+    ) -> list[PathPoint]:
+        length = math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+        step = length / (n - 1)
+        return [
+            PathPoint(
+                s=i * step,
+                x=x0 + (x1 - x0) * i / (n - 1),
+                y=y0 + (y1 - y0) * i / (n - 1),
+                curvature=0.0,
+            )
+            for i in range(n)
+        ]
+
+    through_indices = [1] if lane_count == 2 else list(range(1, lane_count - 1))
+    through_lane_nums = [idx + 1 for idx in through_indices]
+    r_idx = lane_count - 1
+    r_num = lane_count
+
+    new_paths: list[Path] = []
+
+    # 2. Build Through Paths
+    for k, i in zip(through_lane_nums, through_indices):
+        new_paths.append(
+            Path(
+                id=f"N-L{k}_to_S-L{k}",
+                entry_lane_id=f"N-L{k}",
+                exit_lane_id=f"S-L{k}",
+                movement="through",
+                points=_points_straight(_n_off(i), _NS_ENTRY, _n_off(i), _NS_EXIT),
+                speed_limit_mps=SPEED_THROUGH,
+            )
+        )
+        new_paths.append(
+            Path(
+                id=f"S-L{k}_to_N-L{k}",
+                entry_lane_id=f"S-L{k}",
+                exit_lane_id=f"N-L{k}",
+                movement="through",
+                points=_points_straight(_s_off(i), -_NS_ENTRY, _s_off(i), -_NS_EXIT),
+                speed_limit_mps=SPEED_THROUGH,
+            )
+        )
+        new_paths.append(
+            Path(
+                id=f"E-L{k}_to_W-L{k}",
+                entry_lane_id=f"E-L{k}",
+                exit_lane_id=f"W-L{k}",
+                movement="through",
+                points=_points_straight(_EW_ENTRY, _e_off(i), _EW_EXIT, _e_off(i)),
+                speed_limit_mps=SPEED_THROUGH,
+            )
+        )
+        new_paths.append(
+            Path(
+                id=f"W-L{k}_to_E-L{k}",
+                entry_lane_id=f"W-L{k}",
+                exit_lane_id=f"E-L{k}",
+                movement="through",
+                points=_points_straight(-_EW_ENTRY, _w_off(i), -_EW_EXIT, _w_off(i)),
+                speed_limit_mps=SPEED_THROUGH,
+            )
+        )
+
+    # 3. Build Left-turn Paths
+    new_paths.append(
+        Path(
+            id="N-L1_to_E-L1",
+            entry_lane_id="N-L1",
+            exit_lane_id="E-L1",
+            movement="left",
+            points=_points_turn(
+                _n_off(0), _NS_ENTRY, -HALF_BOX / 2, HALF_BOX / 2, _EW_EXIT, _e_off(0), target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id="S-L1_to_W-L1",
+            entry_lane_id="S-L1",
+            exit_lane_id="W-L1",
+            movement="left",
+            points=_points_turn(
+                _s_off(0), -_NS_ENTRY, HALF_BOX / 2, -HALF_BOX / 2, -_EW_EXIT, _w_off(0), target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id="E-L1_to_S-L1",
+            entry_lane_id="E-L1",
+            exit_lane_id="S-L1",
+            movement="left",
+            points=_points_turn(
+                _EW_ENTRY, _e_off(0), HALF_BOX / 2, HALF_BOX / 2, _s_off(0), _NS_EXIT, target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id="W-L1_to_N-L1",
+            entry_lane_id="W-L1",
+            exit_lane_id="N-L1",
+            movement="left",
+            points=_points_turn(
+                -_EW_ENTRY, _w_off(0), -HALF_BOX / 2, -HALF_BOX / 2, _n_off(0), -_NS_EXIT, target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+
+    # 4. Build Right-turn Paths
+    new_paths.append(
+        Path(
+            id=f"N-L{r_num}_to_W-L{r_num}",
+            entry_lane_id=f"N-L{r_num}",
+            exit_lane_id=f"W-L{r_num}",
+            movement="right",
+            points=_points_turn(
+                _n_off(r_idx), _NS_ENTRY, -HALF_BOX / 2, HALF_BOX / 2, -_EW_EXIT, _w_off(r_idx), target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id=f"S-L{r_num}_to_E-L{r_num}",
+            entry_lane_id=f"S-L{r_num}",
+            exit_lane_id=f"E-L{r_num}",
+            movement="right",
+            points=_points_turn(
+                _s_off(r_idx), -_NS_ENTRY, HALF_BOX / 2, -HALF_BOX / 2, _EW_EXIT, _e_off(r_idx), target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id=f"E-L{r_num}_to_N-L{r_num}",
+            entry_lane_id=f"E-L{r_num}",
+            exit_lane_id=f"N-L{r_num}",
+            movement="right",
+            points=_points_turn(
+                _EW_ENTRY, _e_off(r_idx), HALF_BOX / 2, HALF_BOX / 2, _n_off(r_idx), -_NS_EXIT, target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+    new_paths.append(
+        Path(
+            id=f"W-L{r_num}_to_S-L{r_num}",
+            entry_lane_id=f"W-L{r_num}",
+            exit_lane_id=f"S-L{r_num}",
+            movement="right",
+            points=_points_turn(
+                -_EW_ENTRY, _w_off(r_idx), -HALF_BOX / 2, -HALF_BOX / 2, _s_off(r_idx), _NS_EXIT, target_curvature
+            ),
+            speed_limit_mps=SPEED_TURN,
+        )
+    )
+
+    # 5. Build Signal Phases
+    p1_active = (
+        [f"N-L{k}_to_S-L{k}" for k in through_lane_nums]
+        + [f"S-L{k}_to_N-L{k}" for k in through_lane_nums]
+        + [f"N-L{r_num}_to_W-L{r_num}", f"S-L{r_num}_to_E-L{r_num}"]
+    )
+    p2_active = (
+        [f"E-L{k}_to_W-L{k}" for k in through_lane_nums]
+        + [f"W-L{k}_to_E-L{k}" for k in through_lane_nums]
+        + [f"E-L{r_num}_to_N-L{r_num}", f"W-L{r_num}_to_S-L{r_num}"]
+    )
+    p3_active = ["N-L1_to_E-L1", "S-L1_to_W-L1"]
+    p4_active = ["E-L1_to_S-L1", "W-L1_to_N-L1"]
+
+    phase_actives = [p1_active, p2_active, p3_active, p4_active]
     new_phases: list[SignalPhase] = []
     for i, duration in enumerate(signal_split):
-        orig_phase = base.signal.phases[i] if i < len(base.signal.phases) else None
-        active_ids = orig_phase.active_movement_ids if orig_phase else []
         new_phases.append(
             SignalPhase(
                 id=f"P{i+1}",
-                active_movement_ids=active_ids,
+                active_movement_ids=phase_actives[i] if i < len(phase_actives) else [],
                 duration_s=duration,
             )
         )
@@ -112,30 +329,6 @@ def build_modified_intersection(
         cycle_s=sum(signal_split),
         phases=new_phases,
     )
-
-    # 3. Build Paths with modified curvature
-    new_paths: list[Path] = []
-    target_curvature = 1.0 / curve_radius if curve_radius != 0 else 0.0
-
-    for path in base.paths:
-        new_points: list[PathPoint] = []
-        for pt in path.points:
-            c = 0.0
-            if not math.isclose(pt.curvature, 0.0):
-                c = target_curvature if pt.curvature > 0 else -target_curvature
-            new_points.append(
-                PathPoint(s=pt.s, x=pt.x, y=pt.y, curvature=c)
-            )
-        new_paths.append(
-            Path(
-                id=path.id,
-                entry_lane_id=path.entry_lane_id,
-                exit_lane_id=path.exit_lane_id,
-                movement=path.movement,
-                points=new_points,
-                speed_limit_mps=path.speed_limit_mps,
-            )
-        )
 
     return Intersection(
         id=f"{base.id}_L{lane_count}_R{int(curve_radius)}",
@@ -181,7 +374,9 @@ def run_optimization(
                 trajectories: list[Trajectory] = []
                 if run_simulation is not None:
                     # Trajectories returned by simulation loop
-                    trajectories = run_simulation(intersection, DEMAND_RECORDS)
+                    trajectories = run_simulation(
+                        intersection, DEMAND_RECORDS, duration_s=10.0
+                    )
 
                 safety_res: SafetyResult = evaluate_safety(intersection, trajectories)
                 cost_val: float = estimate_cost(intersection)

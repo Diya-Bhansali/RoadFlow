@@ -5,7 +5,7 @@ Coverage
 --------
 - ``test_get_canonical_scenario``: GET /scenarios/canonical_4arm returns 200 and valid data.
 - ``test_get_intersection``: GET /intersections/{id} returns 200 and valid Intersection.
-- ``test_simulate_intersection_503``: POST /intersections/{id}/simulate returns 503 when simulation engine is not available.
+- ``test_simulate_intersection``: POST /intersections/{id}/simulate returns 200 and valid trajectories and macro samples.
 - ``test_get_safety_evaluation``: GET /intersections/{id}/safety returns 200 and valid SafetyResult.
 - ``test_get_full_evaluation``: GET /intersections/{id}/evaluation returns 200 and valid EvaluationResponse.
 """
@@ -37,11 +37,13 @@ def test_get_intersection():
     assert data["name"] == "Canonical 4-Arm Signalised Intersection"
 
 
-def test_simulate_intersection_503():
-    # Since Track A simulation loop is not available yet, this endpoint returns 503
+def test_simulate_intersection():
     response = client.post("/intersections/INT-CANONICAL-4ARM/simulate")
-    assert response.status_code == 503
-    assert "Simulation engine not yet available" in response.json()["detail"]
+    assert response.status_code == 200
+    data = response.json()
+    assert "trajectories" in data
+    assert "macro_samples" in data
+    assert len(data["trajectories"]) > 0
 
 
 def test_get_safety_evaluation():
