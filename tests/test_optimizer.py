@@ -63,11 +63,29 @@ def test_optimization_execution_time():
 
 
 def test_build_modified_intersection():
-    modified = build_modified_intersection(
-        CANONICAL_INTERSECTION, lane_count=4, signal_split=[40, 20, 40, 20], curve_radius=12.0
-    )
+    for lane_count in [2, 3, 4]:
+        modified = build_modified_intersection(
+            CANONICAL_INTERSECTION,
+            lane_count=lane_count,
+            signal_split=[40, 20, 40, 20],
+            curve_radius=12.0,
+        )
 
-    assert len(modified.lanes) == 16  # 4 approaches * 4 lanes
-    assert modified.signal.cycle_s == 120.0
-    assert len(modified.signal.phases) == 4
-    assert modified.signal.phases[0].duration_s == 40.0
+        assert len(modified.lanes) == 4 * lane_count
+        assert modified.signal.cycle_s == 120.0
+        assert len(modified.signal.phases) == 4
+        assert modified.signal.phases[0].duration_s == 40.0
+
+        # Verify all paths reference valid lane IDs
+        lane_ids = {lane.id for lane in modified.lanes}
+        assert len(modified.paths) > 0
+        for path in modified.paths:
+            assert path.entry_lane_id in lane_ids
+            assert path.exit_lane_id in lane_ids
+            assert path.movement in ["left", "through", "right"]
+
+        # Verify all signal phases reference valid path IDs
+        path_ids = {path.id for path in modified.paths}
+        for phase in modified.signal.phases:
+            for mov_id in phase.active_movement_ids:
+                assert mov_id in path_ids

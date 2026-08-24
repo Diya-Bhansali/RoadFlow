@@ -89,19 +89,22 @@ def _find_crossing_s_pairs(
     path_b: Path,
 ) -> list[tuple[float, float]]:
     """Return *(s_a, s_b)* pairs where path geometries come within the
-    conflict-point distance threshold.
+    conflict-point distance threshold inside the intersection box.
 
     Each pair represents a crossing zone where vehicles on the two paths could
     potentially collide.
     """
     pairs: list[tuple[float, float]] = []
+    stop_a = _compute_stop_line_s(path_a)
+    stop_b = _compute_stop_line_s(path_b)
     for pt_a in path_a.points:
         for pt_b in path_b.points:
-            dx = pt_a.x - pt_b.x
-            dy = pt_a.y - pt_b.y
-            dist = math.hypot(dx, dy)
-            if dist <= CONFLICT_POINT_DIST_M:
-                pairs.append((pt_a.s, pt_b.s))
+            if pt_a.s >= stop_a and pt_b.s >= stop_b:
+                dx = pt_a.x - pt_b.x
+                dy = pt_a.y - pt_b.y
+                dist = math.hypot(dx, dy)
+                if dist <= CONFLICT_POINT_DIST_M:
+                    pairs.append((pt_a.s, pt_b.s))
     return pairs
 
 
@@ -117,8 +120,12 @@ def _active_path_ids_at(intersection: Intersection, time_s: float) -> set[str]:
         if elapsed <= cycle_time < elapsed + phase.duration_s:
             return set(phase.active_movement_ids)
         elapsed += phase.duration_s
-    # Fallback: last phase covers any rounding edge
-    return set(signal.phases[-1].active_movement_ids) if signal.phases else set()
+def _compute_stop_line_s(path: Path) -> float:
+    """Return s-coordinate where path enters the central intersection box."""
+    for pt in path.points:
+        if abs(pt.x) <= 10.001 and abs(pt.y) <= 10.001:
+            return pt.s
+    return 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -223,25 +230,27 @@ def evaluate_safety(
                     f"{traj_b.vehicle_id} pass crossing zone "
                     f"{time_gap:.2f} s apart (need {CONFLICT_TIME_WINDOW_S} s)"
                 )
-
     # ------------------------------------------------------------------
     # 3. Signal violation
     # ------------------------------------------------------------------
     for traj in trajectories:
+        path = path_by_id.get(traj.path_id)
+        stop_line_s = _compute_stop_line_s(path) if path else 0.0
         for pt in traj.points:
-            active_ids = _active_path_ids_at(intersection, pt.t)
-            if traj.path_id not in active_ids:
-                violations.append(
-                    f"Signal violation: vehicle {traj.vehicle_id} on path "
-                    f"{traj.path_id} proceeds at t={pt.t:.2f} s when path "
-                    f"is not in active phase"
-                )
-                # Signal check doesn't contribute a continuous margin; use
-                # a sentinel negative value to ensure feasible = False.
-                if tightest_margin > -1.0:
-                    tightest_margin = -1.0
-                # One violation per trajectory is enough for reporting.
-                break
+            if pt.s > stop_line_s + 0.5 and pt.speed_mps > 0.1:
+                active_ids = _active_path_ids_at(intersection, pt.t)
+                if traj.path_id not in active_ids:
+                    violations.append(
+                        f"Signal violation: vehicle {traj.vehicle_id} on path "
+                        f"{traj.path_id} proceeds at t={pt.t:.2f} s when path "
+                        f"is not in active phase"
+                    )
+                    # Signal check doesn't contribute a continuous margin; use
+                    # a sentinel negative value to ensure feasible = False.
+                    if tightest_margin > -1.0:
+                        tightest_margin = -1.0
+                    # One violation per trajectory is enough for reporting.
+                    break
 
     # ------------------------------------------------------------------
     # Finalize result
