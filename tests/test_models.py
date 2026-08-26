@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pytest unit tests for src/models.py.
 
 Coverage
@@ -269,6 +269,31 @@ def test_intersection_valid():
     assert ix.id == "INT-1"
     assert len(ix.lanes) == 2
     assert len(ix.paths) == 1
+    assert ix.city == ""
+    assert ix.control_type == ""
+    assert ix.coord_system == ""
+    assert ix.lat is None
+    assert ix.lng is None
+
+
+def test_intersection_with_metadata():
+    ix = Intersection(
+        id="INT-1",
+        name="Test Junction",
+        lanes=[Lane(**_lane("N-L1", "N"))],
+        paths=[Path(**_path())],
+        signal=Signal(**_signal()),
+        city="Pune, Maharashtra",
+        control_type="Pre-Timed Signal",
+        coord_system="WGS 84",
+        lat=18.5074,
+        lng=73.8077,
+    )
+    assert ix.city == "Pune, Maharashtra"
+    assert ix.control_type == "Pre-Timed Signal"
+    assert ix.coord_system == "WGS 84"
+    assert ix.lat == 18.5074
+    assert ix.lng == 73.8077
 
 
 def test_intersection_missing_name_rejected():

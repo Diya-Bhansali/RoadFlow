@@ -1,4 +1,4 @@
-﻿"""
+"""
 Canonical 4-arm signalised intersection scenario for RoadFlow.
 
 Geometry
@@ -334,6 +334,11 @@ INTERSECTION = Intersection(
     lanes=LANES,
     paths=PATHS,
     signal=SIGNAL,
+    city="Pune, Maharashtra",
+    control_type="Pre-Timed Signal",
+    coord_system="WGS 84",
+    lat=18.5074,
+    lng=73.8077,
 )
 
 
