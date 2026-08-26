@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Literal
 
@@ -159,6 +159,15 @@ class Intersection(BaseModel):
         ..., description="All vehicle paths through the intersection box."
     )
     signal: Signal = Field(..., description="Signal controller for this intersection.")
+    city: str = Field("", description="City and region where the intersection is located.")
+    control_type: str = Field(
+        "", description="Control type of the intersection (e.g. 'Pre-Timed Signal')."
+    )
+    coord_system: str = Field(
+        "", description="Coordinate reference system (e.g. 'WGS 84')."
+    )
+    lat: float | None = Field(None, description="Latitude in decimal degrees.")
+    lng: float | None = Field(None, description="Longitude in decimal degrees.")
 
 
 # ---------------------------------------------------------------------------
