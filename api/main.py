@@ -122,11 +122,16 @@ def get_safety_evaluation(id: str) -> SafetyResult:
 )
 def get_full_evaluation(id: str) -> EvaluationResponse:
     cost = estimate_cost(CANONICAL_INTERSECTION)
-    travel_times = compute_travel_times([])
+    trajectories = (
+        run_simulation(CANONICAL_INTERSECTION, DEMAND_RECORDS)
+        if run_simulation is not None
+        else []
+    )
+    travel_times = compute_travel_times(trajectories)
     avg_tt = (
         sum(travel_times.values()) / len(travel_times) if travel_times else 0.0
     )
-    queue_dict = average_queue_length([], CANONICAL_INTERSECTION)
+    queue_dict = average_queue_length(trajectories, CANONICAL_INTERSECTION)
     avg_q = sum(queue_dict.values()) / len(queue_dict) if queue_dict else 0.0
 
     combined_score = cost / 1_000_000.0 + avg_tt
