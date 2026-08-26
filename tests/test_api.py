@@ -64,5 +64,8 @@ def test_get_full_evaluation():
     assert "cost" in data
     assert data["cost"] > 0
     assert "avg_travel_time" in data
+    assert data["avg_travel_time"] > 0
     assert "avg_queue_length" in data
+    assert data["avg_queue_length"] > 0
     assert "combined_score" in data
+    assert data["combined_score"] > 0
