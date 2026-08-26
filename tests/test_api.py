@@ -18,6 +18,7 @@ client = TestClient(app)
 
 
 def test_get_canonical_scenario():
+    """Test GET /scenarios/canonical_4arm endpoint returns valid intersection data."""
     response = client.get("/scenarios/canonical_4arm")
     assert response.status_code == 200
     data = response.json()
@@ -30,6 +31,7 @@ def test_get_canonical_scenario():
 
 
 def test_get_intersection():
+    """Test GET /intersections/{id} endpoint returns valid intersection model."""
     response = client.get("/intersections/INT-CANONICAL-4ARM")
     assert response.status_code == 200
     data = response.json()
@@ -38,6 +40,7 @@ def test_get_intersection():
 
 
 def test_simulate_intersection():
+    """Test POST /intersections/{id}/simulate returns trajectories and macro samples."""
     response = client.post("/intersections/INT-CANONICAL-4ARM/simulate")
     assert response.status_code == 200
     data = response.json()
@@ -47,6 +50,7 @@ def test_simulate_intersection():
 
 
 def test_get_safety_evaluation():
+    """Test GET /intersections/{id}/safety returns safety evaluation results."""
     response = client.get("/intersections/INT-CANONICAL-4ARM/safety")
     assert response.status_code == 200
     data = response.json()
@@ -57,6 +61,7 @@ def test_get_safety_evaluation():
 
 
 def test_get_full_evaluation():
+    """Test GET /intersections/{id}/evaluation returns comprehensive metrics."""
     response = client.get("/intersections/INT-CANONICAL-4ARM/evaluation")
     assert response.status_code == 200
     data = response.json()

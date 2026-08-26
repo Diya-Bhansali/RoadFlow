@@ -97,6 +97,7 @@ class TestTravelTimes:
     """Verify compute_travel_times."""
 
     def test_compute_travel_times(self):
+        """Verify compute_travel_times calculates correct time difference from first to last point."""
         traj = Trajectory(
             vehicle_id="V1",
             vehicle_class="Passenger Car",
@@ -114,6 +115,7 @@ class TestTravelTimes:
         assert travel_times["V1"] == pytest.approx(10.0)
 
     def test_empty_trajectory_travel_time(self):
+        """Verify empty trajectory returns zero travel time."""
         traj = Trajectory(
             vehicle_id="V_EMPTY",
             vehicle_class="Passenger Car",
@@ -130,6 +132,7 @@ class TestMacroSamples:
     """Verify compute_macro_samples."""
 
     def test_compute_macro_samples_sensible_values(self):
+        """Verify compute_macro_samples produces non-negative density, speed, and flow values."""
         intersection = _make_intersection()
 
         traj1 = Trajectory(
@@ -170,6 +173,7 @@ class TestAverageQueueLength:
     """Verify average_queue_length."""
 
     def test_queue_flagging_slow_vs_fast(self):
+        """Verify slow vehicles near stop line are flagged as queued while fast vehicles are not."""
         intersection = _make_intersection()
 
         # Slow vehicle near stop line (speed = 1.0 m/s < 2.0 m/s, s = 10.0 <= 50.0)

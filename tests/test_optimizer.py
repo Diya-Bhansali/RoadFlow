@@ -24,6 +24,7 @@ from src.models import SafetyResult
 
 
 def test_grid_search_completion_and_ranking():
+    """Verify optimization grid search completes, ranks results, and marks top design as recommended."""
     start_time = time.time()
     results = run_optimization(CANONICAL_INTERSECTION)
     elapsed = time.time() - start_time
@@ -44,6 +45,7 @@ def test_grid_search_completion_and_ranking():
 
 
 def test_infeasible_designs_filtered():
+    """Verify optimization filters out all infeasible designs from results."""
     results = run_optimization(CANONICAL_INTERSECTION)
 
     for r in results:
@@ -53,6 +55,7 @@ def test_infeasible_designs_filtered():
 
 
 def test_optimization_execution_time():
+    """Verify optimization completes within time limit and evaluates all parameter combinations."""
     start_time = time.time()
     results = run_optimization(CANONICAL_INTERSECTION)
     elapsed = time.time() - start_time
@@ -63,6 +66,7 @@ def test_optimization_execution_time():
 
 
 def test_build_modified_intersection():
+    """Verify build_modified_intersection creates valid intersection models with correct lane and path structure."""
     for lane_count in [2, 3, 4]:
         modified = build_modified_intersection(
             CANONICAL_INTERSECTION,

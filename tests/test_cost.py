@@ -101,6 +101,7 @@ class TestCanonicalScenario:
     """Verify estimate_cost on the canonical_4arm scenario."""
 
     def test_canonical_positive_cost(self):
+        """Verify canonical intersection returns positive cost estimate."""
         cost = estimate_cost(CANONICAL)
 
         assert isinstance(cost, float)
@@ -117,6 +118,7 @@ class TestLaneCountComparison:
     """More lanes → higher cost, all else being equal."""
 
     def test_more_lanes_higher_cost(self):
+        """Verify intersections with more lanes have higher estimated cost."""
         fewer = _make_intersection(num_lanes=4)
         more = _make_intersection(num_lanes=8)
 
@@ -130,6 +132,7 @@ class TestZeroCurves:
     """All-straight paths should not crash or produce NaN."""
 
     def test_zero_curves_no_crash(self):
+        """Verify intersections with only straight paths do not crash cost estimation."""
         ix = _make_intersection(
             num_lanes=4,
             paths=[_straight_path("P-straight")],

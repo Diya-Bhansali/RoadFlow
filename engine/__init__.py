@@ -1,4 +1,8 @@
-# RoadFlow Evaluation Engine
+"""RoadFlow Evaluation Engine.
+
+Provides microscopic traffic simulation physics models (IDM, MOBIL) and
+simulation loop execution for intersection traffic analysis.
+"""
 
 from engine.physics.idm import (
     DEFAULT_IDM_PARAMS,

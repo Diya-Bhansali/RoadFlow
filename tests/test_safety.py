@@ -158,6 +158,7 @@ class TestCleanScenario:
     def test_clean_scenario_feasible(
         self, straight_path_ns: Path, green_phase_ns: SignalPhase, green_phase_ew: SignalPhase,
     ):
+        """Verify safety evaluation passes for vehicles with safe spacing and green signal."""
         intersection = _make_intersection(
             paths=[straight_path_ns],
             phases=[green_phase_ns, green_phase_ew],
@@ -205,6 +206,7 @@ class TestGapViolation:
     def test_gap_violation_same_path(
         self, straight_path_ns: Path, green_phase_ns: SignalPhase, green_phase_ew: SignalPhase,
     ):
+        """Verify safety evaluation detects insufficient following distance between vehicles."""
         intersection = _make_intersection(
             paths=[straight_path_ns],
             phases=[green_phase_ns, green_phase_ew],
@@ -251,6 +253,7 @@ class TestSignalViolation:
     def test_signal_violation(
         self, straight_path_ns: Path, green_phase_ew: SignalPhase,
     ):
+        """Verify safety evaluation detects vehicle proceeding on red signal."""
         # Only P-EW is green; P-NS is never active.
         intersection = _make_intersection(
             paths=[straight_path_ns],
@@ -290,6 +293,7 @@ class TestConflictPointViolation:
         green_phase_ns: SignalPhase,
         green_phase_ew: SignalPhase,
     ):
+        """Verify safety evaluation detects vehicles on crossing paths with insufficient temporal separation."""
         # Both paths green simultaneously for simplicity (signal won't fire).
         combined_phase = SignalPhase(
             id="P-ALL", active_movement_ids=["P-NS", "P-EW"], duration_s=120.0,
@@ -341,6 +345,7 @@ class TestEdgeCases:
     def test_empty_trajectories(
         self, straight_path_ns: Path, green_phase_ns: SignalPhase, green_phase_ew: SignalPhase,
     ):
+        """Verify safety evaluation handles empty trajectory list without crashing."""
         intersection = _make_intersection(
             paths=[straight_path_ns],
             phases=[green_phase_ns, green_phase_ew],

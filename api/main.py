@@ -81,6 +81,18 @@ app = FastAPI(
     description="Returns the full Intersection model for the specified ID.",
 )
 def get_intersection(id: str) -> Intersection:
+    """Retrieve intersection design by ID.
+
+    Parameters
+    ----------
+    id : str
+        Intersection identifier.
+
+    Returns
+    -------
+    Intersection
+        Complete intersection model including lanes, paths, and signal.
+    """
     if id in {CANONICAL_INTERSECTION.id, "canonical_4arm"}:
         return CANONICAL_INTERSECTION
     # For now, return canonical intersection if requested ID is found or default
@@ -94,6 +106,23 @@ def get_intersection(id: str) -> Intersection:
     description="Runs microscopic traffic simulation and returns trajectories and macroscopic samples.",
 )
 def simulate_intersection(id: str) -> SimulationResponse:
+    """Execute microscopic traffic simulation for an intersection.
+
+    Parameters
+    ----------
+    id : str
+        Intersection identifier.
+
+    Returns
+    -------
+    SimulationResponse
+        Simulation results including vehicle trajectories and macro samples.
+
+    Raises
+    ------
+    HTTPException
+        503 error if simulation engine is not available.
+    """
     if run_simulation is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -111,6 +140,18 @@ def simulate_intersection(id: str) -> SimulationResponse:
     description="Returns the safety evaluation result for the specified intersection.",
 )
 def get_safety_evaluation(id: str) -> SafetyResult:
+    """Evaluate safety feasibility of an intersection design.
+
+    Parameters
+    ----------
+    id : str
+        Intersection identifier.
+
+    Returns
+    -------
+    SafetyResult
+        Safety evaluation including feasibility flag, margin, and violations.
+    """
     return evaluate_safety(CANONICAL_INTERSECTION, [])
 
 
@@ -121,6 +162,18 @@ def get_safety_evaluation(id: str) -> SafetyResult:
     description="Returns cost, resistance, and combined evaluation metrics for the specified intersection.",
 )
 def get_full_evaluation(id: str) -> EvaluationResponse:
+    """Compute comprehensive evaluation metrics for an intersection.
+
+    Parameters
+    ----------
+    id : str
+        Intersection identifier.
+
+    Returns
+    -------
+    EvaluationResponse
+        Complete evaluation including cost, travel time, queue length, and score.
+    """
     cost = estimate_cost(CANONICAL_INTERSECTION)
     trajectories = (
         run_simulation(CANONICAL_INTERSECTION, DEMAND_RECORDS)
@@ -152,4 +205,11 @@ def get_full_evaluation(id: str) -> EvaluationResponse:
     description="Returns the canonical 4-arm signalised intersection scenario directly.",
 )
 def get_canonical_scenario() -> Intersection:
+    """Retrieve the canonical 4-arm intersection scenario.
+
+    Returns
+    -------
+    Intersection
+        Pre-defined canonical 4-arm signalised intersection model.
+    """
     return CANONICAL_INTERSECTION
